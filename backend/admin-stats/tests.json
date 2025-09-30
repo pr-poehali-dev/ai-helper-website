@@ -1,0 +1,28 @@
+{
+  "tests": [
+    {
+      "name": "Test stats without token",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 401,
+      "expectedBody": {
+        "error": "Admin token required"
+      }
+    },
+    {
+      "name": "Test stats with token",
+      "method": "GET",
+      "path": "/",
+      "headers": {
+        "X-Admin-Token": "test_token"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "users": "object",
+        "messages": "object",
+        "revenue": "object"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

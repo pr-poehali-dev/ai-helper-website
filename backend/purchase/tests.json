@@ -1,0 +1,33 @@
+{
+  "tests": [
+    {
+      "name": "Test purchase requests",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "user_id": "test_user_123",
+        "package_type": "standard",
+        "requests_count": 40,
+        "price_rub": 399
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "success": true,
+        "purchase_id": "number",
+        "paid_requests_available": "number"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Test get user stats",
+      "method": "GET",
+      "path": "/?user_id=test_user_456",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "free_requests_used": "number",
+        "paid_requests_available": "number"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

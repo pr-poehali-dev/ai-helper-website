@@ -25,9 +25,30 @@ const Index = () => {
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [requestsUsed, setRequestsUsed] = useState(3);
+  const [requestsUsed, setRequestsUsed] = useState(0);
+  const [paidRequests, setPaidRequests] = useState(0);
+  const [userId, setUserId] = useState('');
   const [activeSection, setActiveSection] = useState('home');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let storedUserId = localStorage.getItem('ai_helper_user_id');
+    if (!storedUserId) {
+      storedUserId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      localStorage.setItem('ai_helper_user_id', storedUserId);
+    }
+    setUserId(storedUserId);
+    
+    if (storedUserId) {
+      fetch(`https://functions.poehali.dev/f78ea238-e198-40ae-9c1a-788100fd245e?user_id=${storedUserId}`)
+        .then(res => res.json())
+        .then(data => {
+          setRequestsUsed(data.free_requests_used || 0);
+          setPaidRequests(data.paid_requests_available || 0);
+        })
+        .catch(err => console.error('Error loading user stats:', err));
+    }
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -57,19 +78,20 @@ const Index = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-User-Id': userId,
         },
         body: JSON.stringify({
           message: currentInput,
-          history: messages.slice(-10).map(m => ({
-            role: m.role,
-            content: m.content
-          }))
+          user_id: userId,
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
+        if (response.status === 429) {
+          throw new Error('Лимит бесплатных запросов исчерпан. Приобретите дополнительные запросы в разделе Тарифы.');
+        }
         throw new Error(data.error || 'Ошибка получения ответа');
       }
 
@@ -81,7 +103,11 @@ const Index = () => {
       };
       
       setMessages((prev) => [...prev, aiMessage]);
-      setRequestsUsed((prev) => prev + 1);
+      
+      if (data.usage) {
+        setRequestsUsed(data.usage.free_requests_used);
+        setPaidRequests(data.usage.paid_requests_available);
+      }
     } catch (error) {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -123,6 +149,9 @@ const Index = () => {
       name: 'Бесплатно',
       price: '0 ₽',
       requests: '15 запросов',
+      requestsCount: 0,
+      priceNum: 0,
+      packageType: 'free',
       period: 'в сутки',
       features: ['Базовые функции ИИ', 'Обновление каждые 24 часа', 'Стандартная скорость'],
       popular: false,
@@ -131,6 +160,9 @@ const Index = () => {
       name: 'Стандарт',
       price: '399 ₽',
       requests: '40 запросов',
+      requestsCount: 40,
+      priceNum: 399,
+      packageType: 'standard',
       period: 'единоразово',
       features: ['Все функции ИИ', 'Без временных ограничений', 'Приоритетная обработка', 'Поддержка 24/7'],
       popular: true,
@@ -139,11 +171,44 @@ const Index = () => {
       name: 'Про',
       price: '749 ₽',
       requests: '80 запросов',
+      requestsCount: 80,
+      priceNum: 749,
+      packageType: 'pro',
       period: 'единоразово',
       features: ['Расширенные функции', 'Максимальная скорость', 'Приоритет в очереди', 'Персональный менеджер'],
       popular: false,
     },
   ];
+
+  const handlePurchase = async (plan: typeof pricingPlans[0]) => {
+    if (plan.priceNum === 0) return;
+    
+    try {
+      const response = await fetch('https://functions.poehali.dev/f78ea238-e198-40ae-9c1a-788100fd245e', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          package_type: plan.packageType,
+          requests_count: plan.requestsCount,
+          price_rub: plan.priceNum,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setPaidRequests(data.paid_requests_available);
+        alert(`Успешно! Куплено ${plan.requestsCount} запросов. Доступно платных запросов: ${data.paid_requests_available}`);
+      } else {
+        alert(`Ошибка: ${data.error}`);
+      }
+    } catch (error) {
+      alert(`Ошибка покупки: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
+    }
+  };
 
   const renderContent = () => {
     switch (activeSection) {
@@ -179,6 +244,12 @@ const Index = () => {
                     <Icon name="Zap" size={12} />
                     {requestsUsed}/15 запросов
                   </Badge>
+                  {paidRequests > 0 && (
+                    <Badge variant="default" className="gap-1">
+                      <Icon name="Crown" size={12} />
+                      +{paidRequests}
+                    </Badge>
+                  )}
                 </div>
               </div>
 
@@ -316,8 +387,13 @@ const Index = () => {
                       </li>
                     ))}
                   </ul>
-                  <Button className="w-full" variant={plan.popular ? 'default' : 'outline'}>
-                    Выбрать план
+                  <Button 
+                    className="w-full" 
+                    variant={plan.popular ? 'default' : 'outline'}
+                    onClick={() => handlePurchase(plan)}
+                    disabled={plan.priceNum === 0}
+                  >
+                    {plan.priceNum === 0 ? 'Текущий план' : 'Купить'}
                   </Button>
                 </Card>
               ))}

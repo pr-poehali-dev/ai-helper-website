@@ -501,10 +501,15 @@ const Index = () => {
                 </button>
               ))}
             </div>
-            <Button onClick={() => navigate('/admin/login')}>
-              <Icon name="Lock" size={16} className="mr-2" />
-              Админ
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button onClick={() => navigate('/auth')} variant="outline">
+                <Icon name="User" size={16} className="mr-2" />
+                Вход / Регистрация
+              </Button>
+              <Button onClick={() => navigate('/admin/login')} size="icon" variant="ghost">
+                <Icon name="Lock" size={16} />
+              </Button>
+            </div>
           </div>
         </div>
       </nav>

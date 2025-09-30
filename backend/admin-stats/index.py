@@ -64,18 +64,18 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         conn = psycopg2.connect(db_url)
         cur = conn.cursor()
         
-        cur.execute('SELECT COUNT(*) FROM t_p94602577_ai_helper_website.users')
+        cur.execute('SELECT COUNT(*) FROM users')
         users_count = cur.fetchone()[0]
         
-        cur.execute('SELECT COUNT(*) FROM t_p94602577_ai_helper_website.chat_messages')
+        cur.execute('SELECT COUNT(*) FROM messages')
         messages_count = cur.fetchone()[0]
         
         cur.execute('''
             SELECT 
                 COUNT(*) as total_purchases,
-                COALESCE(SUM(price_rub), 0) as total_revenue,
-                COALESCE(SUM(CASE WHEN payment_status = 'completed' THEN price_rub ELSE 0 END), 0) as completed_revenue
-            FROM t_p94602577_ai_helper_website.purchases
+                COALESCE(SUM(amount), 0) as total_revenue,
+                COALESCE(SUM(CASE WHEN status = 'completed' THEN amount ELSE 0 END), 0) as completed_revenue
+            FROM purchases
         ''')
         
         purchase_data = cur.fetchone()
@@ -87,9 +87,9 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             SELECT 
                 package_type,
                 COUNT(*) as count,
-                SUM(price_rub) as revenue
-            FROM t_p94602577_ai_helper_website.purchases
-            WHERE payment_status = 'completed'
+                SUM(amount) as revenue
+            FROM purchases
+            WHERE status = 'completed'
             GROUP BY package_type
         ''')
         
@@ -105,7 +105,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             SELECT 
                 DATE(created_at) as date,
                 COUNT(*) as count
-            FROM t_p94602577_ai_helper_website.users
+            FROM users
             WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'
             GROUP BY DATE(created_at)
             ORDER BY date DESC
@@ -123,7 +123,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             SELECT 
                 COALESCE(SUM(free_requests_used), 0) as total_free,
                 COALESCE(SUM(paid_requests_available), 0) as total_paid_remaining
-            FROM t_p94602577_ai_helper_website.users
+            FROM users
         ''')
         
         requests_data = cur.fetchone()

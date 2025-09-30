@@ -48,20 +48,51 @@ const Index = () => {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    const currentInput = input;
     setInput('');
     setIsTyping(true);
 
-    setTimeout(() => {
+    try {
+      const response = await fetch('https://functions.poehali.dev/80ffdfe3-67c3-452b-b349-b10146da1cc3', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: currentInput,
+          history: messages.slice(-10).map(m => ({
+            role: m.role,
+            content: m.content
+          }))
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Ошибка получения ответа');
+      }
+
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'Спасибо за ваш вопрос! В демо-версии я могу показать структуру ответа. Для полного функционала подключите API ИИ через секреты проекта.',
+        content: data.reply,
         timestamp: new Date(),
       };
+      
       setMessages((prev) => [...prev, aiMessage]);
-      setIsTyping(false);
       setRequestsUsed((prev) => prev + 1);
-    }, 1500);
+    } catch (error) {
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: `Произошла ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}. Убедитесь, что добавлен API ключ OpenAI в секреты проекта.`,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   const features = [

@@ -106,17 +106,11 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         cur = conn.cursor()
         
         cur.execute('''
-            INSERT INTO t_p94602577_ai_helper_website.users (user_id)
-            VALUES (%s)
-            ON CONFLICT (user_id) DO NOTHING
-        ''', (user_id,))
-        
-        cur.execute('''
-            INSERT INTO t_p94602577_ai_helper_website.purchases 
-            (user_id, package_type, requests_count, price_rub, payment_status, yookassa_payment_id, payment_url)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO purchases 
+            (user_id, package_type, requests_count, amount, status, payment_id)
+            VALUES (%s, %s, %s, %s, %s, %s)
             RETURNING id
-        ''', (user_id, package_type, requests_count, amount, 'pending', payment.id, payment.confirmation.confirmation_url))
+        ''', (user_id, package_type, requests_count, amount, 'pending', payment.id))
         
         purchase_id = cur.fetchone()[0]
         

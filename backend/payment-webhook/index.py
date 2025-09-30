@@ -84,9 +84,9 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         cur = conn.cursor()
         
         cur.execute('''
-            UPDATE t_p94602577_ai_helper_website.purchases
-            SET payment_status = %s
-            WHERE yookassa_payment_id = %s AND payment_status = 'pending'
+            UPDATE purchases
+            SET status = %s, completed_at = NOW()
+            WHERE payment_id = %s AND status = 'pending'
             RETURNING id
         ''', ('completed', payment_id))
         
@@ -94,9 +94,9 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         
         if updated:
             cur.execute('''
-                UPDATE t_p94602577_ai_helper_website.users
+                UPDATE users
                 SET paid_requests_available = paid_requests_available + %s
-                WHERE user_id = %s
+                WHERE id = %s
             ''', (requests_count, user_id))
         
         conn.commit()

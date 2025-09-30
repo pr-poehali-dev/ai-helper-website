@@ -30,25 +30,34 @@ const Index = () => {
   const [requestsUsed, setRequestsUsed] = useState(0);
   const [paidRequests, setPaidRequests] = useState(0);
   const [userId, setUserId] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userData, setUserData] = useState<any>(null);
+  const [freeLimit, setFreeLimit] = useState(10);
   const [activeSection, setActiveSection] = useState('home');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    let storedUserId = localStorage.getItem('ai_helper_user_id');
-    if (!storedUserId) {
-      storedUserId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      localStorage.setItem('ai_helper_user_id', storedUserId);
-    }
-    setUserId(storedUserId);
+    const token = localStorage.getItem('user_token');
+    const storedUserData = localStorage.getItem('user_data');
     
-    if (storedUserId) {
-      fetch(`https://functions.poehali.dev/f78ea238-e198-40ae-9c1a-788100fd245e?user_id=${storedUserId}`)
-        .then(res => res.json())
-        .then(data => {
-          setRequestsUsed(data.free_requests_used || 0);
-          setPaidRequests(data.paid_requests_available || 0);
-        })
-        .catch(err => console.error('Error loading user stats:', err));
+    if (token && storedUserData) {
+      try {
+        const user = JSON.parse(storedUserData);
+        setIsAuthenticated(true);
+        setUserData(user);
+        setUserId(user.id.toString());
+        setFreeLimit(15);
+      } catch (err) {
+        console.error('Error parsing user data:', err);
+      }
+    } else {
+      let storedUserId = localStorage.getItem('ai_helper_user_id');
+      if (!storedUserId) {
+        storedUserId = `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        localStorage.setItem('ai_helper_user_id', storedUserId);
+      }
+      setUserId(storedUserId);
+      setFreeLimit(10);
     }
   }, []);
 
@@ -76,12 +85,18 @@ const Index = () => {
     setIsTyping(true);
 
     try {
+      const token = localStorage.getItem('user_token');
+      const headers: any = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['X-User-Token'] = token;
+      }
+      
       const response = await fetch('https://functions.poehali.dev/80ffdfe3-67c3-452b-b349-b10146da1cc3', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-User-Id': userId,
-        },
+        headers,
         body: JSON.stringify({
           message: currentInput,
           user_id: userId,
@@ -92,7 +107,7 @@ const Index = () => {
 
       if (!response.ok) {
         if (response.status === 429) {
-          throw new Error('Лимит бесплатных запросов исчерпан. Приобретите дополнительные запросы в разделе Тарифы.');
+          throw new Error(data.error || 'Лимит запросов исчерпан. Приобретите дополнительные в разделе Тарифы.');
         }
         throw new Error(data.error || 'Ошибка получения ответа');
       }
@@ -148,36 +163,36 @@ const Index = () => {
 
   const pricingPlans = [
     {
-      name: 'Бесплатно',
-      price: '0 ₽',
-      requests: '15 запросов',
-      requestsCount: 0,
-      priceNum: 0,
-      packageType: 'free',
-      period: 'в сутки',
-      features: ['Базовые функции ИИ', 'Обновление каждые 24 часа', 'Стандартная скорость'],
+      name: 'Стартовый',
+      price: '199 ₽',
+      requests: '20 запросов',
+      requestsCount: 20,
+      priceNum: 199,
+      packageType: 'starter',
+      period: 'единоразово',
+      features: ['Все функции ИИ', '20 дополнительных запросов', 'Быстрая обработка', 'Поддержка в чате'],
       popular: false,
     },
     {
       name: 'Стандарт',
-      price: '399 ₽',
+      price: '349 ₽',
       requests: '40 запросов',
       requestsCount: 40,
-      priceNum: 399,
+      priceNum: 349,
       packageType: 'standard',
       period: 'единоразово',
-      features: ['Все функции ИИ', 'Без временных ограничений', 'Приоритетная обработка', 'Поддержка 24/7'],
+      features: ['Все функции ИИ', '40 запросов', 'Приоритетная обработка', 'Поддержка 24/7'],
       popular: true,
     },
     {
-      name: 'Про',
-      price: '749 ₽',
-      requests: '80 запросов',
-      requestsCount: 80,
-      priceNum: 749,
-      packageType: 'pro',
-      period: 'единоразово',
-      features: ['Расширенные функции', 'Максимальная скорость', 'Приоритет в очереди', 'Персональный менеджер'],
+      name: 'Безлимит',
+      price: '999 ₽',
+      requests: 'Неограниченно',
+      requestsCount: 999999,
+      priceNum: 999,
+      packageType: 'unlimited',
+      period: 'на 30 дней',
+      features: ['Безлимитные запросы', 'Максимальная скорость', 'Приоритет в очереди', 'VIP поддержка'],
       popular: false,
     },
   ];
@@ -242,9 +257,15 @@ const Index = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  {!isAuthenticated && (
+                    <Badge variant="outline" className="gap-1">
+                      <Icon name="User" size={12} />
+                      Гость
+                    </Badge>
+                  )}
                   <Badge variant="secondary" className="gap-1">
                     <Icon name="Zap" size={12} />
-                    {requestsUsed}/15 запросов
+                    {requestsUsed}/{freeLimit} запросов
                   </Badge>
                   {paidRequests > 0 && (
                     <Badge variant="default" className="gap-1">
@@ -306,9 +327,13 @@ const Index = () => {
 
               <div className="p-4 border-t border-border/50">
                 <div className="mb-3">
-                  <Progress value={(requestsUsed / 15) * 100} className="h-1" />
+                  <Progress value={(requestsUsed / freeLimit) * 100} className="h-1" />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Осталось {15 - requestsUsed} бесплатных запросов сегодня
+                    {!isAuthenticated ? (
+                      <>Осталось {freeLimit - requestsUsed} запросов без регистрации. <button onClick={() => navigate('/auth')} className="text-primary hover:underline">Войдите</button> и получите +5 бесплатных!</>
+                    ) : (
+                      <>Осталось {freeLimit - requestsUsed} бесплатных запросов{paidRequests > 0 && ` (+${paidRequests} платных)`}</>
+                    )}
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -502,10 +527,24 @@ const Index = () => {
               ))}
             </div>
             <div className="flex items-center gap-2">
-              <Button onClick={() => navigate('/auth')} variant="outline">
-                <Icon name="User" size={16} className="mr-2" />
-                Вход / Регистрация
-              </Button>
+              {isAuthenticated ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">{userData?.username}</span>
+                  <Button onClick={() => {
+                    localStorage.removeItem('user_token');
+                    localStorage.removeItem('user_data');
+                    window.location.reload();
+                  }} variant="outline" size="sm">
+                    <Icon name="LogOut" size={14} className="mr-2" />
+                    Выйти
+                  </Button>
+                </div>
+              ) : (
+                <Button onClick={() => navigate('/auth')} variant="outline">
+                  <Icon name="User" size={16} className="mr-2" />
+                  Вход / Регистрация
+                </Button>
+              )}
               <Button onClick={() => navigate('/admin/login')} size="icon" variant="ghost">
                 <Icon name="Lock" size={16} />
               </Button>

@@ -73,6 +73,13 @@ const Auth = () => {
           <p className="text-muted-foreground">
             {isLogin ? 'Войдите в свой аккаунт' : 'Создайте новый аккаунт'}
           </p>
+          {!isLogin && (
+            <div className="mt-4 p-3 bg-primary/10 rounded-lg">
+              <p className="text-sm font-medium text-primary">
+                🎁 При регистрации: 15 бесплатных запросов вместо 10!
+              </p>
+            </div>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

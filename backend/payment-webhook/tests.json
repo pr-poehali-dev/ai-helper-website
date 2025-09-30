@@ -1,0 +1,17 @@
+{
+  "tests": [
+    {
+      "name": "Test webhook with invalid data",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "event": "payment.succeeded",
+        "object": {}
+      },
+      "expectedStatus": 400,
+      "expectedBody": {
+        "error": "Invalid webhook data"
+      }
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -15,6 +16,7 @@ interface Message {
 }
 
 const Index = () => {
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -184,7 +186,7 @@ const Index = () => {
     if (plan.priceNum === 0) return;
     
     try {
-      const response = await fetch('https://functions.poehali.dev/f78ea238-e198-40ae-9c1a-788100fd245e', {
+      const response = await fetch('https://functions.poehali.dev/cc0f5641-ce74-4742-8f24-578467e7b288', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -192,21 +194,21 @@ const Index = () => {
         body: JSON.stringify({
           user_id: userId,
           package_type: plan.packageType,
+          amount: plan.priceNum,
           requests_count: plan.requestsCount,
-          price_rub: plan.priceNum,
+          description: `${plan.name} - ${plan.requests}`
         }),
       });
 
       const data = await response.json();
 
-      if (response.ok) {
-        setPaidRequests(data.paid_requests_available);
-        alert(`Успешно! Куплено ${plan.requestsCount} запросов. Доступно платных запросов: ${data.paid_requests_available}`);
+      if (response.ok && data.payment_url) {
+        window.location.href = data.payment_url;
       } else {
         alert(`Ошибка: ${data.error}`);
       }
     } catch (error) {
-      alert(`Ошибка покупки: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
+      alert(`Ошибка создания платежа: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
     }
   };
 
@@ -413,13 +415,8 @@ const Index = () => {
                   <Icon name="User" size={48} />
                 </div>
                 <div className="flex-1 text-center md:text-left">
-                  <h3 className="text-2xl font-bold mb-2">Алексей Иванов</h3>
+                  <h3 className="text-2xl font-bold mb-2">Егор Селицкий</h3>
                   <p className="text-muted-foreground mb-4">Основатель и CEO ИИпомогатор</p>
-                  <p className="leading-relaxed">
-                    С 2020 года работаю над созданием доступных и эффективных решений на базе искусственного интеллекта. 
-                    ИИпомогатор — это результат многолетнего опыта в области машинного обучения и стремления 
-                    сделать ИИ-технологии доступными каждому.
-                  </p>
                 </div>
               </div>
             </Card>
@@ -504,7 +501,10 @@ const Index = () => {
                 </button>
               ))}
             </div>
-            <Button>Войти</Button>
+            <Button onClick={() => navigate('/admin/login')}>
+              <Icon name="Lock" size={16} className="mr-2" />
+              Админ
+            </Button>
           </div>
         </div>
       </nav>

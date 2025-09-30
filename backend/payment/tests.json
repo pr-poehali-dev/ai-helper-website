@@ -1,0 +1,20 @@
+{
+  "tests": [
+    {
+      "name": "Test create payment without credentials",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "user_id": "test_user",
+        "package_type": "standard",
+        "amount": 399,
+        "requests_count": 40,
+        "description": "Test payment"
+      },
+      "expectedStatus": 500,
+      "expectedBody": {
+        "error": "Payment system not configured"
+      }
+    }
+  ]
+}
